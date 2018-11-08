@@ -24,7 +24,7 @@
 
 \maketitle
 
-\section{Project description}
+\section{Project Description}
 \section{Related Work}
 \section{Data}
 \section{Methodology}
@@ -45,15 +45,18 @@ We may also add a part-of-speech tag to the end of the feature vector we generat
 \subsection{Clustering}
 To disambiguate the various word senses for a particular word, we can extract the features of each instance of the word and cluster the generated feature vectors. Hopefully, the different word senses will create distinct clusters in the data and each cluster will be assigned a different word sense. Note that this by itself will not provide insight into what the word senses are, only that the word senses are different. 
 
-Because we do not know how many different word senses a word might have in advance, we must pick our clustering method in a way so that it can pick the number of clusters on its own. To do this, we can either use a clustering algorithm that does not require us to specify a number of clusters at all (e.g., DBSCAN \footnote{https://www.aaai.org/Papers/KDD/1996/KDD96-037.pdf}) or we can pick a standard clustering algorithm like $k$-means, restrict the number of clusters to a particular reasonable range ($[1,n]$, where $n$ is the maximum number of word senses that we believe a word will have), and picking the value that optimizes some performance measure like the Bayesian Information Criterion (BIC) \footnote{https://www.jstor.org/stable/2958889}. The plan is to try multiple approaches and compare their performances.
+Because we do not know how many different word senses a word might have in advance, we must pick our clustering method in a way so that it can pick the number of clusters on its own. To do this, we can either use a clustering algorithm that does not require us to specify a number of clusters at all (e.g., DBSCAN\footnote{https://www.aaai.org/Papers/KDD/1996/KDD96-037.pdf}) or we can pick a standard clustering algorithm like $k$-means, restrict the number of clusters to a particular reasonable range ($[1,n]$, where $n$ is the maximum number of word senses that we believe a word will have), and picking the value that optimizes some performance measure like the Bayesian Information Criterion (BIC)\footnote{https://www.jstor.org/stable/2958889}. The plan is to try multiple approaches and compare their performances.
 
 \subsection{Annotation}
 Once the instances of each word have been clustered, we can assign word senses to each cluster, then annotate the input data in a way so that instances with different word senses are considered separate. This can be as simple as assigning a number to each word sense and appending the corresponding number to the end of each word, e.g. ``apple'' (the fruit) could become ``apple0'' and ``Apple'' (the company) could become ``Apple1''. As mentioned earlier, the methodology here would not infer the meanings ``fruit'' and ``company'' themselves but instead just determine that these two word senses are distinct from each other.
 
 \subsection{Evaluation}
-There are a multiple approaches we can take for evaluation. First, we can take a dataset labeled for supervised word sense disambiguation and use them to evaluate the performance of the clustering algorithm using standard measures like V-measure \footnote{http://www.aclweb.org/anthology/D07-1043}. Schutze (1992) also suggests a way to do this without labeled data where one artificially creates ambiguities by merging pairs of arbitrary words and testing the model's ability to determine what the original word was. For example, all instances of ``train'' and ``tennis'' could be replaced with ``traintennis'' and the model is tasked with determine which instances of ``traintennis'' were originally ``train'' and which ones were originallly ``tennis''. We can generalize this method by merging an arbitrary number of words. 
+There are a multiple approaches we can take for evaluation. First, we can take a dataset labeled for supervised word sense disambiguation and use them to evaluate the performance of the clustering algorithm using standard measures like V-measure\footnote{http://www.aclweb.org/anthology/D07-1043}. Schutze~\shortcite{Schutze:92} also suggests a way to do this without labeled data where one artificially creates ambiguities by merging pairs of arbitrary words and testing the model's ability to determine what the original word was. For example, all instances of ``train'' and ``tennis'' could be replaced with ``traintennis'' and the model is tasked with determine which instances of ``traintennis'' were originally ``train'' and which ones were originallly ``tennis''. We can generalize this method by merging an arbitrary number of words. 
 
 We can also view our model as a preprocessing step to a larger task - this means that we can evaluate our model by seeing if annotating the data with word senses first can improve performance on some other task.  
+
+\bibliography{project_checkpoint2}
+\bibliographystyle{naaclhlt2016}
 
 
 \end{document}
