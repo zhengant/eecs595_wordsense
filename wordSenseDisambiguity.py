@@ -26,7 +26,7 @@ def decomposeRawText(listOfRawText):
     eachSentence = []
     for i in range(len(listOfRawText)):
         eachSentence.append(listOfRawText[i])
-        if i == 2:
+        if i % 3 == 2:
             sentencesList.append(eachSentence)
             eachSentence = []
     return sentencesList
@@ -40,7 +40,6 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
         stopWords = nltk.word_tokenize(stopWordsFile)
 
     for i in range(len(sentencesList)):
-        print (sentencesList[i][0])
         sentence = ""
         for word in sentencesList[i][0]:
             sentence += word + " "
@@ -56,9 +55,9 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
 
 def getWord2VecEmbedding(sentencesList):
     model = Word2Vec(sentencesList, min_count = 1)
-    words = sorted(model.vocab.keys())
+    words = sorted(model.wv.vocab.keys())
     res = StandardScaler().fit_transform([model[w] for w in words])
-    print (model)
+    print (res)
     return res
 
 def applyCategorizationModel(data):
