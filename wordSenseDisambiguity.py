@@ -1,6 +1,8 @@
 from sklearn.cluster import DBSCAN, AffinityPropagation, MeanShift
 from sklearn.mixture import GaussianMixture
 from gensim.models import Word2Vec
+from sklearn.preprocessing import  StandardScaler
+import sys
 import nltk
 import csv
 import string
@@ -10,7 +12,7 @@ import numpy as np
 def readCsvFile(file):
     listOfRawText = []
     with open(file, 'r') as csvFile:
-        csvReader = csv.reader(csvFile)
+        csvReader = csv.reader(csvFile, delimiter = '\t')
         for row in csvReader:
             listOfRawText.append(row)
     csvFile.close()
@@ -38,7 +40,13 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
         stopWords = nltk.word_tokenize(stopWordsFile)
 
     for i in range(len(sentencesList)):
-        wordTokens = nltk.word_tokenize(sentencesList[i])
+        print (sentencesList[i][0])
+        sentence = ""
+        for word in sentencesList[i][0]:
+            sentence += word + " "
+        print (sentence)
+
+        wordTokens = nltk.word_tokenize(sentence)
         if removeStopWords:
             wordTokens = [word for word in wordTokens if not word in stopWords]
         if removePunctuation:
@@ -47,14 +55,23 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
     return resList
 
 def getWord2VecEmbedding(sentencesList):
-    res = Word2Vec(sentencesList.sents())
+    model = Word2Vec(sentencesList, min_count = 1)
+    words = sorted(model.vocab.keys())
+    res = StandardScaler().fit_transform([model[w] for w in words])
+    print (model)
     return res
 
+def applyCategorizationModel(data):
+    clt = DBSCAN(eps = 3, min_samples = 1).fit(data)
+    print (clt.labels_)
 
 
 
 
-listOfRawText = readCsvFile("fileName")
+
+filePath = sys.argv[1]
+listOfRawText = readCsvFile(filePath)
 sentencesList = decomposeRawText(listOfRawText)
-sentencesList = preprocessing(sentencesList, True, True, 'stoplist.txt')
+sentencesList = preprocessing(sentencesList, 'stoplist.txt', True, True)
 res = getWord2VecEmbedding(sentencesList)
+applyCategorizationModel(res)
