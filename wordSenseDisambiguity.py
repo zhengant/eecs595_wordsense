@@ -20,16 +20,18 @@ def readCsvFile(file):
     #    print (row)
     return listOfRawText
 
+
 def decomposeRawText(listOfRawText):
     #decompose text
     sentencesList = []
     eachSentence = []
-    for i in range(len(listOfRawText)):
+    for i in range(300):
         eachSentence.append(listOfRawText[i])
         if i % 3 == 2:
             sentencesList.append(eachSentence)
             eachSentence = []
     return sentencesList
+
 
 def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunctuation):
     resList = list()
@@ -43,7 +45,7 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
         sentence = ""
         for word in sentencesList[i][0]:
             sentence += word + " "
-        print (sentence)
+        # print (sentence)
 
         wordTokens = nltk.word_tokenize(sentence)
         if removeStopWords:
@@ -53,6 +55,7 @@ def preprocessing(sentencesList, stopWordsFileName, removeStopWords, removePunct
         resList.append(wordTokens)
     return resList
 
+
 def getWord2VecEmbedding(sentencesList):
     model = Word2Vec(sentencesList, min_count = 1)
     words = sorted(model.wv.vocab.keys())
@@ -60,12 +63,10 @@ def getWord2VecEmbedding(sentencesList):
     print (res)
     return res
 
+
 def applyCategorizationModel(data):
-    clt = DBSCAN(eps = 3, min_samples = 1).fit(data)
+    clt = DBSCAN(eps = 11.5, min_samples = 1).fit(data)
     print (clt.labels_)
-
-
-
 
 
 filePath = sys.argv[1]
@@ -73,4 +74,6 @@ listOfRawText = readCsvFile(filePath)
 sentencesList = decomposeRawText(listOfRawText)
 sentencesList = preprocessing(sentencesList, 'stoplist.txt', True, True)
 res = getWord2VecEmbedding(sentencesList)
+print("!!!!!!!!!!!!!!")
 applyCategorizationModel(res)
+print("end!")
