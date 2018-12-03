@@ -408,7 +408,7 @@ def cluster_embeddings_dbscan(embeddings):
 
 
 def compute_embedding_distances(embeddings):
-  return pairwise_distances(embeddings, metric='cosine', n_jobs=-1)
+  return pairwise_distances(np.array(embeddings), metric='cosine', n_jobs=-1)
 
 
 def cluster_all_words(tsv_filenames):
@@ -421,7 +421,7 @@ def cluster_all_words(tsv_filenames):
     embeddings, _ = embed_sentences_in_file(tsv)
     distances = compute_embedding_distances(embeddings)
     print(distances)
-    
+
     labels = cluster_embeddings_dbscan(embeddings)
     print(len(labels))
     print(labels)
