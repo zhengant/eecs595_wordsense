@@ -401,8 +401,8 @@ def embed_sentences_in_file(tsv):
 
 
 def cluster_embeddings_dbscan(embeddings):
-  db = DBSCAN(eps=0.5, min_samples=5, metric='cosine')
-  labels = db.fit_predict(embeddings, n_jobs=-1)
+  db = DBSCAN(eps=0.25, min_samples=5, metric='cosine')
+  labels = db.fit_predict(embeddings)
 
   return labels
 
