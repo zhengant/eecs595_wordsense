@@ -20,6 +20,7 @@ import bert.tokenization
 import numpy as np
 import tensorflow as tf
 from sklearn.cluster import DBSCAN
+from sklearn.metrics import pairwise_distances
 
 def init_tf_flags():
   flags = tf.flags
@@ -39,7 +40,7 @@ def init_tf_flags():
       "than this will be padded.")
 
   flags.DEFINE_string(
-      "init_checkpoint", bert_model_dir + '/bert_mode.ckpt',
+      "init_checkpoint", bert_model_dir + '/bert_model.ckpt',
       "Initial checkpoint (usually from a pre-trained BERT model).")
 
   flags.DEFINE_string("vocab_file", bert_model_dir + '/vocab.txt',
@@ -381,27 +382,34 @@ def embed_sentences_in_file(tsv):
     features=features, seq_length=FLAGS.max_seq_length) 
 
   # get embedding for each instance of the word
-  for result in estimator.predict(input_fn, yield_single_examples=True):
+  for idx, result in enumerate(estimator.predict(input_fn, yield_single_examples=True)):
     unique_id = int(result["unique_id"])
     feature = unique_id_to_feature[unique_id]
 
     for i, token in enumerate(feature.tokens):
-      if token == metadata[i][3]:
+      if token == metadata[idx][3]:
         layers = []
         for j, _ in enumerate(layer_indexes):
           layer_output = result['layer_output_%d' % j]
           layers.append([
             round(float(x), 6) for x in layer_output[i:(i+1)].flat])
+
+        # concatenate last x layers together
         embeddings.append(np.concatenate(layers, axis=None))
+        break
 
   return embeddings, metadata
 
 
 def cluster_embeddings_dbscan(embeddings):
-  db = DBSCAN(eps=0.5, min_samples=5, metric='cosine')
+  db = DBSCAN(eps=0.175, min_samples=2, metric='cosine')
   labels = db.fit_predict(embeddings)
 
   return labels
+
+
+def compute_embedding_distances(embeddings):
+  return pairwise_distances(np.array(embeddings), metric='cosine', n_jobs=-1)
 
 
 def cluster_all_words(tsv_filenames):
@@ -411,7 +419,12 @@ def cluster_all_words(tsv_filenames):
 
   # read files
   for tsv in tsv_filenames:
-    labels = cluster_embeddings_dbscan(embed_sentences_in_file(tsv))
+    embeddings, _ = embed_sentences_in_file(tsv)
+    # distances = compute_embedding_distances(embeddings)
+    # print(distances)
+
+    labels = cluster_embeddings_dbscan(embeddings)
+    print(len(labels))
     print(labels)
 
 
