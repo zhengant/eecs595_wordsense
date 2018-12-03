@@ -381,17 +381,19 @@ def embed_sentences_in_file(tsv):
     features=features, seq_length=FLAGS.max_seq_length) 
 
   # get embedding for each instance of the word
-  for result in estimator.predict(input_fn, yield_single_examples=True):
+  for idx, result in enumerate(estimator.predict(input_fn, yield_single_examples=True)):
     unique_id = int(result["unique_id"])
     feature = unique_id_to_feature[unique_id]
 
     for i, token in enumerate(feature.tokens):
-      if token == metadata[i][3]:
+      if token == metadata[idx][3]:
         layers = []
         for j, _ in enumerate(layer_indexes):
           layer_output = result['layer_output_%d' % j]
           layers.append([
             round(float(x), 6) for x in layer_output[i:(i+1)].flat])
+
+        # concatenate last x layers together
         embeddings.append(np.concatenate(layers, axis=None))
 
   return embeddings, metadata
