@@ -411,7 +411,8 @@ def cluster_all_words(tsv_filenames):
 
   # read files
   for tsv in tsv_filenames:
-    labels = cluster_embeddings_dbscan(embed_sentences_in_file(tsv))
+    embeddings, _ = embed_sentences_in_file(tsv)
+    labels = cluster_embeddings_dbscan(embeddings)
     print(labels)
 
 
