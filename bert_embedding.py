@@ -39,7 +39,7 @@ def init_tf_flags():
       "than this will be padded.")
 
   flags.DEFINE_string(
-      "init_checkpoint", bert_model_dir + '/bert_mode.ckpt',
+      "init_checkpoint", bert_model_dir + '/bert_model.ckpt',
       "Initial checkpoint (usually from a pre-trained BERT model).")
 
   flags.DEFINE_string("vocab_file", bert_model_dir + '/vocab.txt',
