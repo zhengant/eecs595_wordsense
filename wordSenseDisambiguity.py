@@ -1,6 +1,6 @@
 from sklearn.cluster import DBSCAN, AffinityPropagation, MeanShift
 from sklearn.mixture import GaussianMixture
-from gensim.models import Word2Vec
+import gensim
 import os
 from sklearn.preprocessing import  StandardScaler
 import sys
@@ -91,21 +91,30 @@ def getWord2VecEmbedding(key, processedList):
         for j in range(index1 - 2, index1 + 3):
             if j >= 0 and j < len(list1[i]):
                 eachInput.append(list1[i][j])
-            else:
-                eachInput.append('')
+            #else:
+                #eachInput.append('')
         inputList.append(eachInput)
 
     print(inputList)
-    model = Word2Vec(inputList, min_count = 1)
-    words = sorted(model.wv.vocab.keys())
-    res = StandardScaler().fit_transform([model[w] for w in words])
-    for ele in res:
-        print(ele)
+
+    # Load Google's pre-trained Word2Vec model.
+    model = gensim.models.KeyedVectors.load_word2vec_format('./model/GoogleNews-vectors-negative300.bin', binary=True)
+    model.save("word2vec.model")
+    #model = gensim.models.Word2Vec.load("word2vec.model")
+
+    resList = []
+    #words = sorted(model.wv.vocab.keys())
+    for sentence in inputList:
+        res = StandardScaler().fit_transform([model[w] for w in sentence])
+        resList.append(res)
+
+    #for ele in res:
+    #    print(ele)
 
     print (len(res))
     print (len(list1))
 
-    return key, res
+    return key, resList
 
 def applyCategorizationModel(data):
     clt = DBSCAN(eps = 20, min_samples = 1).fit(data)
@@ -119,6 +128,6 @@ def applyCategorizationModel(data):
 directoryPath = sys.argv[1]
 corpusDict = readTsvDirectroy(directoryPath)
 # sentencesList = decomposeRawText(listOfRawText)
-key, processedList = preprocessing(corpusDict,'number', 'stoplist.txt', True, True)
+key, processedList = preprocessing(corpusDict,'force', 'stoplist.txt', True, True)
 key, res = getWord2VecEmbedding(key, processedList)
 applyCategorizationModel(res)
