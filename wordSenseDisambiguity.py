@@ -105,19 +105,23 @@ def getWord2VecEmbedding(key, processedList):
     resList = []
     #words = sorted(model.wv.vocab.keys())
     for sentence in inputList:
-        res = StandardScaler().fit_transform([model[w] for w in sentence])
-        resList.append(res)
+        res = []
+        for w in sentence:
+            try:
+                res.append(model[w])
+            except KeyError:
+                continue
+        resList.append(sum(res)/len(res))
+    resList = StandardScaler().fit_transform(resList)
 
     #for ele in res:
     #    print(ele)
 
-    print (len(res))
-    print (len(list1))
-
     return key, resList
 
 def applyCategorizationModel(data):
-    clt = DBSCAN(eps = 20, min_samples = 1).fit(data)
+    clt = DBSCAN(eps = 25, min_samples = 1).fit(data)
+    print("Print Label: ")
     for ele in clt.labels_:
         print(ele)
 
