@@ -20,6 +20,7 @@ import bert.tokenization
 import numpy as np
 import tensorflow as tf
 from sklearn.cluster import DBSCAN
+from sklearn.metrics import pairwise_distances
 
 def init_tf_flags():
   flags = tf.flags
@@ -401,9 +402,13 @@ def embed_sentences_in_file(tsv):
 
 def cluster_embeddings_dbscan(embeddings):
   db = DBSCAN(eps=0.5, min_samples=5, metric='cosine')
-  labels = db.fit_predict(embeddings)
+  labels = db.fit_predict(embeddings, n_jobs=-1)
 
   return labels
+
+
+def compute_embedding_distances(embeddings):
+  return pairwise_distances(embeddings, metric='cosine', n_jobs=-1)
 
 
 def cluster_all_words(tsv_filenames):
@@ -414,7 +419,11 @@ def cluster_all_words(tsv_filenames):
   # read files
   for tsv in tsv_filenames:
     embeddings, _ = embed_sentences_in_file(tsv)
+    distances = compute_embedding_distances(embeddings)
+    print(distances)
+    
     labels = cluster_embeddings_dbscan(embeddings)
+    print(len(labels))
     print(labels)
 
 
