@@ -396,12 +396,13 @@ def embed_sentences_in_file(tsv):
 
         # concatenate last x layers together
         embeddings.append(np.concatenate(layers, axis=None))
+        break
 
   return embeddings, metadata
 
 
 def cluster_embeddings_dbscan(embeddings):
-  db = DBSCAN(eps=0.25, min_samples=5, metric='cosine')
+  db = DBSCAN(eps=0.175, min_samples=2, metric='cosine')
   labels = db.fit_predict(embeddings)
 
   return labels
@@ -419,8 +420,8 @@ def cluster_all_words(tsv_filenames):
   # read files
   for tsv in tsv_filenames:
     embeddings, _ = embed_sentences_in_file(tsv)
-    distances = compute_embedding_distances(embeddings)
-    print(distances)
+    # distances = compute_embedding_distances(embeddings)
+    # print(distances)
 
     labels = cluster_embeddings_dbscan(embeddings)
     print(len(labels))
