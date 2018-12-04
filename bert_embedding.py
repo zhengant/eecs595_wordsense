@@ -409,7 +409,7 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances):
-  db = DBSCAN(eps=75, min_samples=2, metric='precomputed', n_jobs=-1)
+  db = DBSCAN(eps=40, min_samples=2, metric='precomputed', n_jobs=-1)
   labels = db.fit_predict(distances)
 
   # assign noisy points the label of their nearest non-noisy point
@@ -427,14 +427,14 @@ def compute_embedding_distances(embeddings):
 # def output_senses(labels, metadata):
   
 
-def cluster_all_words(tsv_filenames):
+def cluster_all_words(tsv_filenames, tsv_dir):
   # setup
   tf.logging.set_verbosity(tf.logging.WARN)
   init_tf_flags()
 
   # read files
   for tsv in tsv_filenames:
-    embeddings, _ = embed_sentences_in_file(tsv)
+    embeddings, _ = embed_sentences_in_file(tsv_dir + '/' + tsv)
     distances = compute_embedding_distances(embeddings)
     print(distances)
     print(np.mean(distances))
@@ -445,11 +445,11 @@ def cluster_all_words(tsv_filenames):
 
 
 def main():
-  # tsv_dir = 'Datasets'
-  # tsv_filenames = os.listdir(tsv_dir)
-  tsv_filenames = ['Datasets/add.tsv']
+  tsv_dir = 'Datasets'
+  tsv_filenames = os.listdir(tsv_dir)
+  # tsv_filenames = ['Datasets/add.tsv']
 
-  cluster_all_words(tsv_filenames)
+  cluster_all_words(tsv_filenames, tsv_dir)
 
 
 if __name__ == '__main__':
