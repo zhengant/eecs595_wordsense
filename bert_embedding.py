@@ -409,7 +409,7 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances):
-  db = DBSCAN(eps=0.175, min_samples=2, metric='precomputed', n_jobs=-1)
+  db = DBSCAN(eps=75, min_samples=2, metric='precomputed', n_jobs=-1)
   labels = db.fit_predict(distances)
 
   # assign noisy points the label of their nearest non-noisy point
@@ -437,6 +437,8 @@ def cluster_all_words(tsv_filenames):
     embeddings, _ = embed_sentences_in_file(tsv)
     distances = compute_embedding_distances(embeddings)
     print(distances)
+    print(np.mean(distances))
+    print(np.max(distances))
 
     labels = cluster_embeddings_dbscan(distances)
     print(labels)
