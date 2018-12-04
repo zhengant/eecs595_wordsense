@@ -421,7 +421,12 @@ def cluster_embeddings_dbscan(distances):
 
 
 def compute_embedding_distances(embeddings):
-  normalized_embeddings = np.divide(embeddings, np.linalg.norm(embeddings, axis=1))
+  normalized_embeddings = np.array(embeddings)
+  for i in range(len(normalized_embeddings)):
+    normalized_embeddings[i] = np.divide(normalized_embeddings[i], np.linalg.norm(normalized_embeddings[i]))
+
+  # normalized_embeddings = np.divide(embeddings, np.linalg.norm(embeddings, axis=1))
+  # normalized_embeddings = normalized_embeddings.reshape(embeddings.shape[0], -1)
   return pairwise_distances(normalized_embeddings, metric='euclidean', n_jobs=-1)
 
 
