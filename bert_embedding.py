@@ -401,16 +401,31 @@ def embed_sentences_in_file(tsv):
   return embeddings, metadata
 
 
-def cluster_embeddings_dbscan(embeddings):
-  db = DBSCAN(eps=0.175, min_samples=2, metric='cosine')
-  labels = db.fit_predict(embeddings)
+def find_closest_inlier(i, labels, distances):
+  closest = np.argsort(distances[i])
+  for idx in closest:
+    if labels[idx] >= 0:
+      return idx
+
+
+def cluster_embeddings_dbscan(distances):
+  db = DBSCAN(eps=0.175, min_samples=2, metric='precomputed', n_jobs=-1)
+  labels = db.fit_predict(distances)
+
+  # assign noisy points the label of their nearest non-noisy point
+  # for i in range(len(labels)):
+  #   if labels[i] == -1:
+  #     labels[i] = labels[find_closest_inlier(i, labels, distances)]
 
   return labels
 
 
 def compute_embedding_distances(embeddings):
-  return pairwise_distances(np.array(embeddings), metric='cosine', n_jobs=-1)
+  return pairwise_distances(np.array(embeddings), metric='euclidean', n_jobs=-1)
 
+
+# def output_senses(labels, metadata):
+  
 
 def cluster_all_words(tsv_filenames):
   # setup
@@ -420,11 +435,10 @@ def cluster_all_words(tsv_filenames):
   # read files
   for tsv in tsv_filenames:
     embeddings, _ = embed_sentences_in_file(tsv)
-    # distances = compute_embedding_distances(embeddings)
-    # print(distances)
+    distances = compute_embedding_distances(embeddings)
+    print(distances)
 
-    labels = cluster_embeddings_dbscan(embeddings)
-    print(len(labels))
+    labels = cluster_embeddings_dbscan(distances)
     print(labels)
 
 
