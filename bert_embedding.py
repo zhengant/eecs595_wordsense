@@ -492,12 +492,16 @@ def hyperparameter_search(eps_vals, min_samples_vals):
         result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
           test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        out.write('b-cubed:\n')
         out.write(find_performance_string(result.decode('utf-8')))
+        out.write('\n')
 
         result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
           test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        out.write('nmi:\n')
         out.write(find_performance_string(result.decode('utf-8')))
+        out.write('\n')
 
 
 def main():
