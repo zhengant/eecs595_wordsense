@@ -527,6 +527,13 @@ def hyperparameter_search(eps_vals, min_samples_vals):
           best_eps = eps
           best_min_samples = min_samples
 
+    out.write('best performance:\n')
+    out.write('eps: ' + str(best_eps) + '\n')
+    out.write('min_samples: ' + str(best_min_samples) + '\n')
+    out.write('b_cubed: ' + str(best_b_cubed) + '\n')
+    out.write('nmi: ' + str(best_nmi) + '\n')
+    out.write('harmonic mean: ' + str(best_harmonic_mean) + '\n')
+
   print('best performance:')
   print('eps: ' + str(best_eps))
   print('min_samples: ' + str(best_min_samples))
@@ -545,7 +552,7 @@ def main():
   # tsv_filenames = ['Datasets/add.tsv']
 
   # cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
-  eps_vals = np.arange(0.1, 1.0, 0.05)
+  eps_vals = np.arange(0.25, 1.0, 0.025)
   min_vals = np.arange(1, 11, 1)
   # eps_vals = [0.5]
   # min_vals = [2]
