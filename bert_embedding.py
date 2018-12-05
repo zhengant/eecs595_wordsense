@@ -420,7 +420,7 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances, eps, min_samples):
-  db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed', n_jobs=-1)
+  db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed')
   labels = db.fit_predict(distances)
 
   # assign noisy points the label of their nearest non-noisy point
@@ -436,7 +436,7 @@ def compute_embedding_distances(embeddings):
   for i in range(len(normalized_embeddings)):
     normalized_embeddings[i] = np.divide(normalized_embeddings[i], np.linalg.norm(normalized_embeddings[i]))
 
-  return pairwise_distances(normalized_embeddings, metric='euclidean', n_jobs=-1)
+  return pairwise_distances(normalized_embeddings, metric='euclidean')
 
 
 def output_senses(labels, metadata, outfile):
@@ -501,7 +501,7 @@ def hyperparameter_search(eps_vals, min_samples_vals):
     for eps in eps_vals:
       for min_samples in min_samples_vals:
         print('eps: ' + str(eps) + '\t' + 'min_samples: ' + str(min_samples))
-        
+
         if os.path.isfile('senses.out'):
           os.remove('senses.out')
         cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
@@ -561,8 +561,8 @@ def main():
   # tsv_filenames = ['Datasets/add.tsv']
 
   # cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
-  eps_vals = np.arange(0.25, 1.0, 0.025)
-  min_vals = np.arange(1, 11, 1)
+  eps_vals = np.arange(0.25, 1.0, 0.05)
+  min_vals = np.arange(1, 20, 1)
   # eps_vals = [0.5]
   # min_vals = [2]
 
