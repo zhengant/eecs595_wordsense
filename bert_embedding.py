@@ -468,17 +468,20 @@ def find_performance_string(output_string):
   for line in lines:
     if line[:3] == 'all':
       return line
-
+  print('could not find add')
   return None
 
 
 def hyperparameter_search(eps_vals, min_samples_vals):
   test_data_dir = 'semeval-2012-task-13-trial-data'
   tsv_dir = 'Datasets1'
-  tsv_filenames = os.listdir(tsv_dir)
+  # tsv_filenames = os.listdir(tsv_dir)
+  tsv_filenames = ['add.tsv']
   with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
       for min_samples in min_samples_vals:
+        if os.path.isfile('senses.out'):
+          os.remove('senses.out')
         cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
 
         out.write('############################################################\n')
