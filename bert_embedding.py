@@ -465,11 +465,21 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
 
 def find_performance_string(output_string):
   lines = output_string.splitlines()
-  for line in lines:
+  for line in reversed(lines):
     if line[:3] == 'all':
-      return line
+      tab_char = line.rfind('\t') # find last tab character
+      # get number: start from one past tab, go to all but last \n char
+      score = float(line[(tab_char+1):(-1)])  
+      return score
   print('could not find add')
   return None
+
+
+def calc_harmonic_mean(b_cubed, nmi):
+  if b_cubed == 0 or nmi == 0:
+    return 0
+  else:
+    return 2/(1/b_cubed + 1/nmi)
 
 
 def hyperparameter_search(eps_vals, min_samples_vals):
@@ -492,15 +502,15 @@ def hyperparameter_search(eps_vals, min_samples_vals):
         result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
           test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
-        out.write('b-cubed:\n')
-        out.write(find_performance_string(result.decode('utf-8')))
+        b_cubed = find_performance_string(result.decode('utf-8'))
+        out.write('b-cubed: ' + str(b_cubed))
         out.write('\n')
 
         result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
           test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
-        out.write('nmi:\n')
-        out.write(find_performance_string(result.decode('utf-8')))
+        nmi = find_performance_string(result.decode('utf-8'))
+        out.write('nmi: ' + str(nmi))
         out.write('\n')
 
 
