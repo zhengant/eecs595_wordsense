@@ -556,17 +556,17 @@ def main():
   tf.logging.set_verbosity(tf.logging.WARN)
   init_tf_flags()
 
-  # tsv_dir = 'Datasets'
-  # tsv_filenames = os.listdir(tsv_dir)
+  tsv_dir = 'Datasets'
+  tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['Datasets/add.tsv']
 
-  # cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
-  eps_vals = np.arange(0.25, 1.0, 0.05)
-  min_vals = np.arange(1, 20, 1)
+  cluster_all_words(tsv_filenames, tsv_dir, 0.5, 1, 'senses.out')
+  # eps_vals = np.arange(0.25, 1.0, 0.05)
+  # min_vals = np.arange(1, 20, 1)
   # eps_vals = [0.5]
   # min_vals = [2]
 
-  hyperparameter_search(eps_vals, min_vals)
+  # hyperparameter_search(eps_vals, min_vals)
 
 
 
