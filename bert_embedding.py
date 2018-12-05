@@ -445,10 +445,6 @@ def output_senses(labels, metadata, outfile):
       
 
 def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
-  # setup
-  tf.logging.set_verbosity(tf.logging.WARN)
-  init_tf_flags()
-
   # read files
   for tsv in tsv_filenames:
     embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv)
@@ -540,6 +536,10 @@ def hyperparameter_search(eps_vals, min_samples_vals):
 
 
 def main():
+  # setup
+  tf.logging.set_verbosity(tf.logging.WARN)
+  init_tf_flags()
+  
   # tsv_dir = 'Datasets'
   # tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['Datasets/add.tsv']
