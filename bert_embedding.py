@@ -465,7 +465,7 @@ def find_performance_string(output_string):
     if line[:3] == 'all':
       tab_char = line.rfind('\t') # find last tab character
       # get number: start from one past tab, go to all but last \n char
-      score = float(line[(tab_char+1):(-1)])  
+      score = float(line[(tab_char):].strip())  
       return score
   print('could not find add')
   return None
@@ -539,7 +539,7 @@ def main():
   # setup
   tf.logging.set_verbosity(tf.logging.WARN)
   init_tf_flags()
-  
+
   # tsv_dir = 'Datasets'
   # tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['Datasets/add.tsv']
