@@ -473,12 +473,12 @@ def find_performance_string(output_string):
 
 
 def hyperparameter_search(eps_vals, min_samples_vals):
-  test_data_dir = 'SemEval-2013-Task-13-test-data'
-  tsv_dir = 'Datasets'
+  test_data_dir = 'semeval-2012-task-13-trial-data'
+  tsv_dir = 'Datasets1'
   tsv_filenames = os.listdir(tsv_dir)
   with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
-      for min_samples in min_samples:
+      for min_samples in min_samples_vals:
         cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
 
         out.write('############################################################\n')
@@ -487,10 +487,15 @@ def hyperparameter_search(eps_vals, min_samples_vals):
         out.write('############################################################\n')        
 
         result = subprocess.run(
-          ['java', '-jar', test_data_dir + '/scoring/fuzzy-bcubed.jar', 
-          test_data_dir + '/keys/gold/all.singlesense.key', 'senses.out'], 
+          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'], 
           capture_output=True, encoding='utf-8')
-        
+        out.write(find_performance_string(result.stdout))
+
+        result = subprocess.run(
+          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'], 
+          capture_output=True, encoding='utf-8')
         out.write(find_performance_string(result.stdout))
 
 
