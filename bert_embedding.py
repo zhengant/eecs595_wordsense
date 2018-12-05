@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 #########################################################################
-# most of this code is adapted from extract_features.py from the Google 
+# much of this code is adapted from extract_features.py from the Google 
 # BERT github repository
 # https://github.com/google-research/bert
 #########################################################################
@@ -13,6 +13,7 @@ import codecs
 import collections
 import json
 import re
+import subprocess
 
 # assumes you have cloned the BERT repository to your working directory
 import bert.modeling
@@ -462,12 +463,51 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
     output_senses(labels, metadata, outfile)
 
 
-def main():
+def find_performance_string(output_string):
+  lines = output_string.splitlines()
+  for line in lines:
+    if line[:3] == 'all':
+      return line
+
+  return None
+
+
+def hyperparameter_search(eps_vals, min_samples_vals):
+  test_data_dir = 'SemEval-2013-Task-13-test-data'
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
+  with open('hyperparameter_results.txt', 'w') as out:
+    for eps in eps_vals:
+      for min_samples in min_samples:
+        cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
+
+        out.write('############################################################\n')
+        out.write('epsilon = ' + str(eps) + '\n')
+        out.write('min_samples = ' + str(min_samples) + '\n')
+        out.write('############################################################\n')        
+
+        result = subprocess.run(
+          ['java', '-jar', test_data_dir + '/scoring/fuzzy-bcubed.jar', 
+          test_data_dir + '/keys/gold/all.singlesense.key', 'senses.out'], 
+          capture_output=True, encoding='utf-8')
+        
+        out.write(find_performance_string(result.stdout))
+
+
+def main():
+  # tsv_dir = 'Datasets'
+  # tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['Datasets/add.tsv']
 
-  cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
+  # cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
+  # eps_vals = np.arange(0.1, 1.0, 0.1)
+  # min_vals = np.arange(1, 10, 1)
+  eps_vals = [0.5]
+  min_vals = [2]
+
+  hyperparameter_search(eps_vals, min_vals)
+
+
 
 
 if __name__ == '__main__':
