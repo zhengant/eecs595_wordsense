@@ -338,44 +338,51 @@ def read_input_file(tsv_filename):
   return sentences, metadata
 
 
-def embed_sentences_in_file(tsv):
+class BertParams:
+  def __init__(self):
+    # setup
+    FLAGS = tf.flags.FLAGS
+
+    self.layer_indexes = [int(x) for x in FLAGS.layers.split(",")]
+
+    self.bert_config = bert.modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+
+    self.tokenizer = bert.tokenization.FullTokenizer(
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+
+    self.is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+    self.run_config = tf.contrib.tpu.RunConfig(
+        master=FLAGS.master,
+        tpu_config=tf.contrib.tpu.TPUConfig(
+            num_shards=FLAGS.num_tpu_cores,
+            per_host_input_for_training=self.is_per_host))
+
+    self.model_fn = model_fn_builder(
+        bert_config=self.bert_config,
+        init_checkpoint=FLAGS.init_checkpoint,
+        layer_indexes=self.layer_indexes,
+        use_tpu=FLAGS.use_tpu,
+        use_one_hot_embeddings=FLAGS.use_one_hot_embeddings)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.estimator = tf.contrib.tpu.TPUEstimator(
+        use_tpu=FLAGS.use_tpu,
+        model_fn=self.model_fn,
+        config=self.run_config,
+        predict_batch_size=FLAGS.batch_size)
+
+
+def embed_sentences_in_file(tsv, bert_params):
   sentences, metadata = read_input_file(tsv)
   embeddings = []
 
-  # setup
   FLAGS = tf.flags.FLAGS
-
-  layer_indexes = [int(x) for x in FLAGS.layers.split(",")]
-
-  bert_config = bert.modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
-
-  tokenizer = bert.tokenization.FullTokenizer(
-      vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
-
-  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-  run_config = tf.contrib.tpu.RunConfig(
-      master=FLAGS.master,
-      tpu_config=tf.contrib.tpu.TPUConfig(
-          num_shards=FLAGS.num_tpu_cores,
-          per_host_input_for_training=is_per_host))
-
-  model_fn = model_fn_builder(
-      bert_config=bert_config,
-      init_checkpoint=FLAGS.init_checkpoint,
-      layer_indexes=layer_indexes,
-      use_tpu=FLAGS.use_tpu,
-      use_one_hot_embeddings=FLAGS.use_one_hot_embeddings)
-
-  # If TPU is not available, this will fall back to normal Estimator on CPU
-  # or GPU.
-  estimator = tf.contrib.tpu.TPUEstimator(
-      use_tpu=FLAGS.use_tpu,
-      model_fn=model_fn,
-      config=run_config,
-      predict_batch_size=FLAGS.batch_size)
+  if bert_params is None:
+    bert_params = BertParams()
 
   features = convert_examples_to_features(
-    examples=sentences, seq_length=FLAGS.max_seq_length, tokenizer=tokenizer)
+    examples=sentences, seq_length=FLAGS.max_seq_length, tokenizer=bert_params.tokenizer)
   unique_id_to_feature = {}
   for feature in features:
     unique_id_to_feature[feature.unique_id] = feature
@@ -384,14 +391,14 @@ def embed_sentences_in_file(tsv):
     features=features, seq_length=FLAGS.max_seq_length) 
 
   # get embedding for each instance of the word
-  for idx, result in enumerate(estimator.predict(input_fn, yield_single_examples=True)):
+  for idx, result in enumerate(bert_params.estimator.predict(input_fn, yield_single_examples=True)):
     unique_id = int(result["unique_id"])
     feature = unique_id_to_feature[unique_id]
 
     for i, token in enumerate(feature.tokens):
       if token == metadata[idx][3]:
         layers = []
-        for j, _ in enumerate(layer_indexes):
+        for j, _ in enumerate(bert_params.layer_indexes):
           layer_output = result['layer_output_%d' % j]
           layers.append([
             round(float(x), 6) for x in layer_output[i:(i+1)].flat])
@@ -445,16 +452,16 @@ def output_senses(labels, metadata, outfile):
       
 
 def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
+  bert_params = BertParams()
   # read files
   for tsv in tsv_filenames:
-    embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv)
+    embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv, bert_params)
     distances = compute_embedding_distances(embeddings)
     # print(distances)
     # print(np.mean(distances))
     # print(np.max(distances))
 
     labels = cluster_embeddings_dbscan(distances, eps, min_samples)
-    print(labels)
 
     output_senses(labels, metadata, outfile)
 
@@ -493,6 +500,8 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
       for min_samples in min_samples_vals:
+        print('eps: ' + str(eps) + '\t' + 'min_samples: ' + str(min_samples))
+        
         if os.path.isfile('senses.out'):
           os.remove('senses.out')
         cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
