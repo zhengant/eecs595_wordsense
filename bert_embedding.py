@@ -485,8 +485,8 @@ def calc_harmonic_mean(b_cubed, nmi):
 def hyperparameter_search(eps_vals, min_samples_vals):
   test_data_dir = 'semeval-2012-task-13-trial-data'
   tsv_dir = 'Datasets1'
-  # tsv_filenames = os.listdir(tsv_dir)
-  tsv_filenames = ['add.tsv']
+  tsv_filenames = os.listdir(tsv_dir)
+  # tsv_filenames = ['add.tsv']
 
   best_b_cubed = 0
   best_nmi = 0
@@ -545,10 +545,10 @@ def main():
   # tsv_filenames = ['Datasets/add.tsv']
 
   # cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
-  # eps_vals = np.arange(0.1, 1.0, 0.1)
-  # min_vals = np.arange(1, 10, 1)
-  eps_vals = [0.5]
-  min_vals = [2]
+  eps_vals = np.arange(0.1, 1.0, 0.05)
+  min_vals = np.arange(1, 11, 1)
+  # eps_vals = [0.5]
+  # min_vals = [2]
 
   hyperparameter_search(eps_vals, min_vals)
 
