@@ -10,6 +10,9 @@ import numpy as np
 import re
 import glob
 from sklearn.preprocessing import normalize
+from scipy.spatial.distance import cdist
+
+avgdis = 0
 
 def readTsvDirectroy(path):
     corpusDict = {}
@@ -79,12 +82,19 @@ def getWord2VecEmbedding(key, processedList):
                 continue
         resList.append(sum(res)/len(res))
     resList = normalize(resList, norm='l2', axis=0, copy=True, return_norm=False)
+    totaldis = 0
+    count = 0
+    for i in range(0, len(resList)-1):
+        totaldis = cdist([resList[i]], [resList[i+1]], 'seuclidean', V=None)
+        count += 1
+    avgdis = totaldis/count
+    #print(resList)
     #resList = StandardScaler().fit_transform(resList)
     return key, resList
 
 
 def applyCategorizationModel(data):
-    clt = DBSCAN(eps = 0.001, min_samples = 1).fit(data)
+    clt = DBSCAN(eps = avgdis, min_samples = 1).fit(data)
     senses = {}
     id = 1
     for ele in clt.labels_:
