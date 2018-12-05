@@ -312,6 +312,7 @@ def read_input_file(tsv_filename):
   metadata = []
   unique_id = 0
   with open(tsv_filename, 'r') as input:
+    _ = input.readline() # discard first line
     while True:
       line = bert.tokenization.convert_to_unicode(input.readline())
       if not line:
