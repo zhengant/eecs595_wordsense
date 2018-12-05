@@ -453,9 +453,9 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
   for tsv in tsv_filenames:
     embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv)
     distances = compute_embedding_distances(embeddings)
-    print(distances)
-    print(np.mean(distances))
-    print(np.max(distances))
+    # print(distances)
+    # print(np.mean(distances))
+    # print(np.max(distances))
 
     labels = cluster_embeddings_dbscan(distances, eps, min_samples)
     print(labels)
@@ -476,27 +476,25 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   test_data_dir = 'semeval-2012-task-13-trial-data'
   tsv_dir = 'Datasets1'
   tsv_filenames = os.listdir(tsv_dir)
-  with open('hyperparameter_results.txt', 'wb') as out:
+  with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
       for min_samples in min_samples_vals:
         cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
 
-        out.write(b'############################################################\n')
-        out.write(('epsilon = ' + str(eps) + '\n').encode('utf-8'))
-        out.write(('min_samples = ' + str(min_samples) + '\n').encode('utf-8'))
-        out.write(b'############################################################\n')        
+        out.write('############################################################\n')
+        out.write(('epsilon = ' + str(eps) + '\n'))
+        out.write(('min_samples = ' + str(min_samples) + '\n'))
+        out.write('############################################################\n')        
 
-        result = subprocess.call(
+        result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
-          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'], 
-          stdout=out)
-        out.write(find_performance_string(result.stdout).encode('utf-8'))
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        out.write(find_performance_string(result.decode('utf-8')))
 
-        result = subprocess.call(
+        result = subprocess.check_output(
           ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
-          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'], 
-          stdout=out)
-        out.write(find_performance_string(result.stdout).encode('utf-8'))
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        out.write(find_performance_string(result.decode('utf-8')))
 
 
 def main():
