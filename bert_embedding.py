@@ -407,15 +407,17 @@ def find_closest_inlier(i, labels, distances):
     if labels[idx] >= 0:
       return idx
 
+  return 0
 
-def cluster_embeddings_dbscan(distances):
-  db = DBSCAN(eps=40, min_samples=2, metric='precomputed', n_jobs=-1)
+
+def cluster_embeddings_dbscan(distances, eps, min_samples):
+  db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed', n_jobs=-1)
   labels = db.fit_predict(distances)
 
   # assign noisy points the label of their nearest non-noisy point
-  # for i in range(len(labels)):
-  #   if labels[i] == -1:
-  #     labels[i] = labels[find_closest_inlier(i, labels, distances)]
+  for i in range(len(labels)):
+    if labels[i] == -1:
+      labels[i] = labels[find_closest_inlier(i, labels, distances)]
 
   return labels
 
@@ -425,29 +427,38 @@ def compute_embedding_distances(embeddings):
   for i in range(len(normalized_embeddings)):
     normalized_embeddings[i] = np.divide(normalized_embeddings[i], np.linalg.norm(normalized_embeddings[i]))
 
-  # normalized_embeddings = np.divide(embeddings, np.linalg.norm(embeddings, axis=1))
-  # normalized_embeddings = normalized_embeddings.reshape(embeddings.shape[0], -1)
   return pairwise_distances(normalized_embeddings, metric='euclidean', n_jobs=-1)
 
 
-# def output_senses(labels, metadata):
-  
+def output_senses(labels, metadata, outfile):
+  label_to_sense = {}
+  with open(outfile, 'a') as out:
+    for i, label in enumerate(labels):
+      out.write(metadata[i][1] + '.' + metadata[i][2] + ' ')
+      out.write(metadata[i][0] + ' ')
+      if label not in label_to_sense:
+        label_to_sense[label] = len(label)
+      
+      out.write(label_to_sense[label] + '/1.0\n')
+      
 
-def cluster_all_words(tsv_filenames, tsv_dir):
+def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
   # setup
   tf.logging.set_verbosity(tf.logging.WARN)
   init_tf_flags()
 
   # read files
   for tsv in tsv_filenames:
-    embeddings, _ = embed_sentences_in_file(tsv_dir + '/' + tsv)
+    embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv)
     distances = compute_embedding_distances(embeddings)
     print(distances)
     print(np.mean(distances))
     print(np.max(distances))
 
-    labels = cluster_embeddings_dbscan(distances)
+    labels = cluster_embeddings_dbscan(distances, eps, min_samples)
     print(labels)
+
+    output_senses(labels, metadata, outfile)
 
 
 def main():
@@ -455,7 +466,7 @@ def main():
   tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['Datasets/add.tsv']
 
-  cluster_all_words(tsv_filenames, tsv_dir)
+  cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
 
 
 if __name__ == '__main__':
