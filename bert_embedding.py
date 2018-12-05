@@ -487,6 +487,13 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   tsv_dir = 'Datasets1'
   # tsv_filenames = os.listdir(tsv_dir)
   tsv_filenames = ['add.tsv']
+
+  best_b_cubed = 0
+  best_nmi = 0
+  best_harmonic_mean = 0
+  best_eps = eps_vals[0]
+  best_min_samples = min_samples_vals[0]
+
   with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
       for min_samples in min_samples_vals:
@@ -512,6 +519,24 @@ def hyperparameter_search(eps_vals, min_samples_vals):
         nmi = find_performance_string(result.decode('utf-8'))
         out.write('nmi: ' + str(nmi))
         out.write('\n')
+        
+        hm = calc_harmonic_mean(b_cubed, nmi)
+        out.write('harmonic mean: ' + str(hm))
+        out.write('\n')
+
+        if(hm > best_harmonic_mean):
+          best_b_cubed = b_cubed
+          best_nmi = nmi
+          best_harmonic_mean = hm
+          best_eps = eps
+          best_min_samples = min_samples
+
+  print('best performance:')
+  print('eps: ' + str(best_eps))
+  print('min_samples: ' + str(best_min_samples))
+  print('b_cubed: ' + str(best_b_cubed))
+  print('nmi: ' + str(best_nmi))
+  print('harmonic mean: ' + str(best_harmonic_mean))
 
 
 def main():
