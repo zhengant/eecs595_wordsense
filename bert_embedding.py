@@ -439,7 +439,7 @@ def output_senses(labels, metadata, outfile):
       if label not in label_to_sense:
         label_to_sense[label] = len(label_to_sense) + 1
       
-      out.write(label_to_sense[label] + '/1.0\n')
+      out.write(str(label_to_sense[label]) + '/1.0\n')
       
 
 def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
