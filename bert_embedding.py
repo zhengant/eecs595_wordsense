@@ -437,7 +437,7 @@ def output_senses(labels, metadata, outfile):
       out.write(metadata[i][1] + '.' + metadata[i][2] + ' ')
       out.write(metadata[i][0] + ' ')
       if label not in label_to_sense:
-        label_to_sense[label] = len(label) + 1
+        label_to_sense[label] = len(label_to_sense) + 1
       
       out.write(label_to_sense[label] + '/1.0\n')
       
