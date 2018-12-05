@@ -9,6 +9,7 @@ import string
 import numpy as np
 import re
 import glob
+from sklearn.preprocessing import normalize
 
 def readTsvDirectroy(path):
     corpusDict = {}
@@ -77,12 +78,13 @@ def getWord2VecEmbedding(key, processedList):
             except KeyError:
                 continue
         resList.append(sum(res)/len(res))
-    resList = StandardScaler().fit_transform(resList)
+    resList = normalize(resList, norm='l2', axis=0, copy=True, return_norm=False)
+    #resList = StandardScaler().fit_transform(resList)
     return key, resList
 
 
 def applyCategorizationModel(data):
-    clt = DBSCAN(eps = 22.5, min_samples = 1).fit(data)
+    clt = DBSCAN(eps = 0.001, min_samples = 1).fit(data)
     senses = {}
     id = 1
     for ele in clt.labels_:
@@ -97,6 +99,6 @@ def applyCategorizationModel(data):
 
 directoryPath = sys.argv[1]
 corpusDict = readTsvDirectroy(directoryPath)
-key, processedList = preprocessing(corpusDict,'force', 'stoplist.txt', True, True)
+key, processedList = preprocessing(corpusDict,'dark', 'stoplist.txt', True, True)
 key, res = getWord2VecEmbedding(key, processedList)
 print(applyCategorizationModel(res))
