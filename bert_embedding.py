@@ -591,7 +591,7 @@ def main():
   # run test data
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
-  cluster_all_words(tsv_filenames, tsv_dir, best_eps, best_min_samples, 'senses.out')
+  cluster_all_words(tsv_filenames, tsv_dir, None, None, 'senses.out')
 
 
 
