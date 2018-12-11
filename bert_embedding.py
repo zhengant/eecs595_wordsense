@@ -453,7 +453,7 @@ def cluster_embeddings_gmm(embeddings, n_components_vals):
   for n in n_components_vals:
     gmm = GaussianMixture(n_components=n)
     preds = gmm.fit(normalized).predict(normalized)
-    bic = gmm.bic(normalized_embeddings)
+    bic = gmm.bic(normalized)
 
     if bic < best_bic:
       best_predictions = preds
