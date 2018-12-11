@@ -22,6 +22,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import pairwise_distances
+from sklearn.mixture import GaussianMixture
+
 
 def init_tf_flags():
   flags = tf.flags
@@ -431,12 +433,33 @@ def cluster_embeddings_dbscan(distances, eps, min_samples):
   return labels
 
 
-def compute_embedding_distances(embeddings):
-  normalized_embeddings = np.array(embeddings)
-  for i in range(len(normalized_embeddings)):
-    normalized_embeddings[i] = np.divide(normalized_embeddings[i], np.linalg.norm(normalized_embeddings[i]))
+def normalize_embeddings(embeddings):
+  normalized = np.array(embeddings)
+  for i in range(len(normalized)):
+    normalized[i] = np.divide(normalized[i], np.linalg.norm(normalized[i]))
 
-  return pairwise_distances(normalized_embeddings, metric='euclidean')
+  return normalized
+
+def compute_embedding_distances(embeddings):
+  normalized = normalize_embeddings(embeddings)
+
+  return pairwise_distances(normalized, metric='euclidean')
+
+
+def cluster_embeddings_gmm(embeddings, n_components_vals):
+  best_bic = np.Inf
+  best_predictions = None
+  normalized = normalize_embeddings(embeddings)
+  for n in n_components_vals:
+    gmm = GaussianMixture(n_components=n)
+    preds = gmm.fit(normalized).predict(normalized)
+    bic = gmm.bic(normalized_embeddings)
+
+    if bic < best_bic:
+      best_predictions = preds
+      best_bic = bic
+
+  return preds
 
 
 def output_senses(labels, metadata, outfile):
@@ -461,7 +484,8 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
     # print(np.mean(distances))
     # print(np.max(distances))
 
-    labels = cluster_embeddings_dbscan(distances, eps, min_samples)
+    # labels = cluster_embeddings_dbscan(distances, eps, min_samples)
+    labels = cluster_embeddings_gmm(embeddings, range(1,11))
 
     output_senses(labels, metadata, outfile)
 
@@ -550,23 +574,24 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   print('nmi: ' + str(best_nmi))
   print('harmonic mean: ' + str(best_harmonic_mean))
 
+  return best_eps, best_min_samples
+
 
 def main():
   # setup
   tf.logging.set_verbosity(tf.logging.WARN)
   init_tf_flags()
 
-  tsv_dir = 'Datasets'
-  tsv_filenames = os.listdir(tsv_dir)
-  # tsv_filenames = ['Datasets/add.tsv']
-
-  cluster_all_words(tsv_filenames, tsv_dir, 0.5, 1, 'senses.out')
+  # # hyperparameter search for bert->DBSCAN
   # eps_vals = np.arange(0.25, 1.0, 0.05)
   # min_vals = np.arange(1, 20, 1)
-  # eps_vals = [0.5]
-  # min_vals = [2]
+  
+  # best_eps, best_min_samples = hyperparameter_search(eps_vals, min_vals)
 
-  # hyperparameter_search(eps_vals, min_vals)
+  # run test data
+  tsv_dir = 'Datasets'
+  tsv_filenames = os.listdir(tsv_dir)
+  cluster_all_words(tsv_filenames, tsv_dir, best_eps, best_min_samples, 'senses.out')
 
 
 
