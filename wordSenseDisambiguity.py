@@ -82,7 +82,9 @@ def getWord2VecEmbedding(key, processedList):
     count = 0
     for i in range(0, len(resList)-1):
         for j in range (i+1, len(resList)):
-            totaldis = cdist([resList[i]], [resList[j]], 'seuclidean', V=None)
+            a = np.array(resList[i])
+            b = np.array(resList[j])
+            totaldis += np.linalg.norm(a-b)
             count += 1
     avgdis = totaldis/count
     print("average distance: ", avgdis) # average distance:  [[0.00670175]]
@@ -92,7 +94,7 @@ def getWord2VecEmbedding(key, processedList):
 
 
 def applyCategorizationModel(data, avgdis):
-    clt = DBSCAN(eps = avgdis[0][0], min_samples = 1).fit(data)
+    clt = DBSCAN(eps = avgdis, min_samples = 1).fit(data)
     senses = {}
     id = 1
     for ele in clt.labels_:
