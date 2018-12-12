@@ -106,8 +106,8 @@ def applyCategorizationModel(data, avgdis):
         id += 1
     return senses
 
-def applyCategorizationModelNew(data, avgdis):
-    clt = DBSCAN(eps = avgdis, min_samples = 1).fit(data)
+def applyCategorizationModelNew(data, avgdis, minSample):
+    clt = DBSCAN(eps = avgdis, min_samples = minSample).fit(data)
     senseList = [num + 1 for num in clt.labels_]
     return senseList
 
@@ -117,13 +117,13 @@ def buildWord2VecEmbedding(corpusDict, key):
     k, res, avgdis = getWord2VecEmbedding(key, processedList)
     return res, avgdis
 
-def buildResList(corpusDict):
+def buildResList(corpusDict, minSample):
     resLists = []
     for key, lists in corpusDict.items():
         print ("start to build the file " + key + ".tsv")
 
         res, avgdis = buildWord2VecEmbedding(corpusDict, key)
-        senseList = applyCategorizationModelNew(res, avgdis)
+        senseList = applyCategorizationModelNew(res, avgdis, minSample)
         for i in range(len(lists)):
             pos = lists[i][1] + '.' + lists[i][2]
             id = lists[i][0]
@@ -132,17 +132,21 @@ def buildResList(corpusDict):
 
     return resLists
 
-def output_senses(resLists):
-    with open('word2VecRes.txt', 'w') as out:
+def output_senses(resLists, minSample):
+    with open('word2VecMinSample' + str(minSample) + '.txt', 'w') as out:
         for i in range(len(resLists)):
             out.write(str(resLists[i][0]) + ' ' + str(resLists[i][1]) + ' ' + str(resLists[i][2]) + '/1.0\n')
 
 directoryPath = sys.argv[1]
-corpusDict = readTsvDirectroy(directoryPath)
+
 #key, processedList = preprocessing(corpusDict,'dark', 'stoplist.txt', True, True)
 #key, res, avgdis = getWord2VecEmbedding(key, processedList)
 #print(applyCategorizationModel(res, avgdis))
 
-resLists = buildResList(corpusDict)
-output_senses(resLists)
+for minSample in range(1, 21):
+
+    corpusDict = readTsvDirectroy(directoryPath)
+    print ("minSample " + str(minSample) + ":")
+    resLists = buildResList(corpusDict, minSample)
+    output_senses(resLists, minSample)
 
