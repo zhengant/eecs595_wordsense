@@ -481,12 +481,12 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
   # read files
   for tsv in tsv_filenames:
     embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv, bert_params)
-    distances = compute_embedding_distances(embeddings)
+    # distances = compute_embedding_distances(embeddings)
     # print(distances)
     # print(np.mean(distances))
     # print(np.max(distances))
-    labels = cluster_embeddings_dbscan(distances, eps, min_samples)
-    # labels = cluster_embeddings_gmm(embeddings, range(1,11))
+    # labels = cluster_embeddings_dbscan(distances, eps, min_samples)
+    labels = cluster_embeddings_gmm(embeddings, range(1,11))
 
     output_senses(labels, metadata, outfile)
 
