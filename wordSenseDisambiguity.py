@@ -12,8 +12,6 @@ import glob
 from sklearn.preprocessing import normalize
 from scipy.spatial.distance import cdist
 
-avgdis = 0
-
 def readTsvDirectroy(path):
     corpusDict = {}
     for filename in glob.glob(os.path.join(path, '*.tsv')):
@@ -64,11 +62,9 @@ def getWord2VecEmbedding(key, processedList):
     list1 = [rawText[4] for rawText in processedList]
     inputList = []
     for i in range(len(list1)):
-        index1 =list1[i].index(processedList[i][3])
         eachInput = []
-        for j in range(index1 - 2, index1 + 3):
-            if j >= 0 and j < len(list1[i]):
-                eachInput.append(list1[i][j])
+        for j in range(len(list1[i])):
+            eachInput.append(list1[i][j])
         inputList.append(eachInput)
     model = gensim.models.KeyedVectors.load_word2vec_format('./model/GoogleNews-vectors-negative300.bin', binary=True)
     model.save("word2vec.model")
@@ -85,16 +81,18 @@ def getWord2VecEmbedding(key, processedList):
     totaldis = 0
     count = 0
     for i in range(0, len(resList)-1):
-        totaldis = cdist([resList[i]], [resList[i+1]], 'seuclidean', V=None)
-        count += 1
+        for j in range (i+1, len(resList)):
+            totaldis = cdist([resList[i]], [resList[j]], 'seuclidean', V=None)
+            count += 1
     avgdis = totaldis/count
+    print("average distance: ", avgdis) # average distance:  [[0.00670175]]
     #print(resList)
     #resList = StandardScaler().fit_transform(resList)
-    return key, resList
+    return key, resList, avgdis
 
 
-def applyCategorizationModel(data):
-    clt = DBSCAN(eps = avgdis, min_samples = 1).fit(data)
+def applyCategorizationModel(data, avgdis):
+    clt = DBSCAN(eps = avgdis[0][0], min_samples = 1).fit(data)
     senses = {}
     id = 1
     for ele in clt.labels_:
@@ -110,5 +108,5 @@ def applyCategorizationModel(data):
 directoryPath = sys.argv[1]
 corpusDict = readTsvDirectroy(directoryPath)
 key, processedList = preprocessing(corpusDict,'dark', 'stoplist.txt', True, True)
-key, res = getWord2VecEmbedding(key, processedList)
-print(applyCategorizationModel(res))
+key, res, avgdis = getWord2VecEmbedding(key, processedList)
+print(applyCategorizationModel(res, avgdis))
