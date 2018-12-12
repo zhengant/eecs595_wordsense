@@ -87,7 +87,7 @@ def getWord2VecEmbedding(key, processedList):
             totaldis += np.linalg.norm(a-b)
             count += 1
     avgdis = totaldis/count
-    print("average distance: ", avgdis) # average distance:  [[0.00670175]]
+    print("average distance: ", avgdis)
     #print(resList)
     #resList = StandardScaler().fit_transform(resList)
     return key, resList, avgdis
@@ -109,7 +109,8 @@ def applyCategorizationModel(data, avgdis):
 def applyCategorizationModelNew(data, avgdis, minSample):
     #clt = DBSCAN(eps = avgdis, min_samples = minSample).fit(data)
     #clt = AffinityPropagation(damping = minSample).fit(data)
-    clt = MeanShift(bin_seeding=True).fit(data)
+    #clt = MeanShift(bin_seeding=True).fit(data)
+    clt = MeanShift().fit(data)
     senseList = [num + 1 for num in clt.labels_]
     return senseList
 

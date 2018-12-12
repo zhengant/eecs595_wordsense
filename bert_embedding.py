@@ -421,7 +421,10 @@ def find_closest_inlier(i, labels, distances):
   return 0
 
 
-def cluster_embeddings_dbscan(distances, eps, min_samples):
+def cluster_embeddings_dbscan(distances, eps, min_samples, gamma):
+  if eps is None:
+    eps = np.mean(distances) * gamma
+
   db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed')
   labels = db.fit_predict(distances)
 
@@ -439,6 +442,7 @@ def normalize_embeddings(embeddings):
     normalized[i] = np.divide(normalized[i], np.linalg.norm(normalized[i]))
 
   return normalized
+
 
 def compute_embedding_distances(embeddings):
   normalized = normalize_embeddings(embeddings)
@@ -474,8 +478,10 @@ def output_senses(labels, metadata, outfile):
       out.write(str(label_to_sense[label]) + '/1.0\n')
       
 
-def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
+def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, gamma, outfile):
   bert_params = BertParams()
+  if os.path.isfile(outfile):
+    os.remove(outfile)
   # read files
   for tsv in tsv_filenames:
     embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv, bert_params)
@@ -483,9 +489,8 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
     # print(distances)
     # print(np.mean(distances))
     # print(np.max(distances))
-
-    # labels = cluster_embeddings_dbscan(distances, eps, min_samples)
-    labels = cluster_embeddings_gmm(embeddings, range(1,11))
+    labels = cluster_embeddings_dbscan(distances, eps, min_samples, gamma)
+    # labels = cluster_embeddings_gmm(embeddings, range(1,11))
 
     output_senses(labels, metadata, outfile)
 
@@ -509,7 +514,7 @@ def calc_harmonic_mean(b_cubed, nmi):
     return 2/(1/b_cubed + 1/nmi)
 
 
-def hyperparameter_search(eps_vals, min_samples_vals):
+def hyperparameter_search_dbscan(eps_vals, min_samples_vals, gamma_vals):
   test_data_dir = 'semeval-2012-task-13-trial-data'
   tsv_dir = 'Datasets1'
   tsv_filenames = os.listdir(tsv_dir)
@@ -520,49 +525,54 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   best_harmonic_mean = 0
   best_eps = eps_vals[0]
   best_min_samples = min_samples_vals[0]
+  best_gamma = gamma_vals[0]
 
   with open('hyperparameter_results.txt', 'w') as out:
     for eps in eps_vals:
       for min_samples in min_samples_vals:
-        print('eps: ' + str(eps) + '\t' + 'min_samples: ' + str(min_samples))
+        for gamma in gamma_vals:
+          print('eps: ' + str(eps) + '\t' + 'min_samples: ' + str(min_samples) + '\t' + 'gamma: ' + str(gamma))
 
-        if os.path.isfile('senses.out'):
-          os.remove('senses.out')
-        cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
+          if os.path.isfile('senses.out'):
+            os.remove('senses.out')
+          cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, gamma, 'senses.out')
 
-        out.write('############################################################\n')
-        out.write(('epsilon = ' + str(eps) + '\n'))
-        out.write(('min_samples = ' + str(min_samples) + '\n'))
-        out.write('############################################################\n')        
+          out.write('############################################################\n')
+          out.write(('epsilon = ' + str(eps) + '\n'))
+          out.write(('min_samples = ' + str(min_samples) + '\n'))
+          out.write('gamma = ' + str(gamma) + '\n')
+          out.write('############################################################\n')        
 
-        result = subprocess.check_output(
-          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
-          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
-        b_cubed = find_performance_string(result.decode('utf-8'))
-        out.write('b-cubed: ' + str(b_cubed))
-        out.write('\n')
+          result = subprocess.check_output(
+            ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
+            test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+          b_cubed = find_performance_string(result.decode('utf-8'))
+          out.write('b-cubed: ' + str(b_cubed))
+          out.write('\n')
 
-        result = subprocess.check_output(
-          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
-          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
-        nmi = find_performance_string(result.decode('utf-8'))
-        out.write('nmi: ' + str(nmi))
-        out.write('\n')
-        
-        hm = calc_harmonic_mean(b_cubed, nmi)
-        out.write('harmonic mean: ' + str(hm))
-        out.write('\n')
+          result = subprocess.check_output(
+            ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
+            test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+          nmi = find_performance_string(result.decode('utf-8'))
+          out.write('nmi: ' + str(nmi))
+          out.write('\n')
+          
+          hm = calc_harmonic_mean(b_cubed, nmi)
+          out.write('harmonic mean: ' + str(hm))
+          out.write('\n')
 
-        if(hm > best_harmonic_mean):
-          best_b_cubed = b_cubed
-          best_nmi = nmi
-          best_harmonic_mean = hm
-          best_eps = eps
-          best_min_samples = min_samples
+          if(hm > best_harmonic_mean):
+            best_b_cubed = b_cubed
+            best_nmi = nmi
+            best_harmonic_mean = hm
+            best_eps = eps
+            best_min_samples = min_samples
+            best_gamma = gamma
 
     out.write('best performance:\n')
     out.write('eps: ' + str(best_eps) + '\n')
     out.write('min_samples: ' + str(best_min_samples) + '\n')
+    out.write('gamma: ' + str(gamma) + '\n')
     out.write('b_cubed: ' + str(best_b_cubed) + '\n')
     out.write('nmi: ' + str(best_nmi) + '\n')
     out.write('harmonic mean: ' + str(best_harmonic_mean) + '\n')
@@ -570,11 +580,12 @@ def hyperparameter_search(eps_vals, min_samples_vals):
   print('best performance:')
   print('eps: ' + str(best_eps))
   print('min_samples: ' + str(best_min_samples))
+  print('gamma: ' + str(best_gamma))
   print('b_cubed: ' + str(best_b_cubed))
   print('nmi: ' + str(best_nmi))
   print('harmonic mean: ' + str(best_harmonic_mean))
 
-  return best_eps, best_min_samples
+  return best_eps, best_min_samples, best_gamma
 
 
 def main():
@@ -584,16 +595,15 @@ def main():
 
   # # hyperparameter search for bert->DBSCAN
   # eps_vals = np.arange(0.25, 1.0, 0.05)
-  # min_vals = np.arange(1, 20, 1)
+  min_vals = np.arange(1, 10, 1)
+  gamma_vals = np.arange(0.2, 1.2, 0.1)
   
-  # best_eps, best_min_samples = hyperparameter_search(eps_vals, min_vals)
+  best_eps, best_min_samples, best_gamma = hyperparameter_search_dbscan([None], min_vals, gamma_vals)
 
   # run test data
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
-  cluster_all_words(tsv_filenames, tsv_dir, None, None, 'senses.out')
-
-
+  cluster_all_words(tsv_filenames, tsv_dir, best_eps, best_min_samples, best_gamma, 'bert-dynamicdbscan-gamma.out')
 
 
 if __name__ == '__main__':
