@@ -440,6 +440,7 @@ def normalize_embeddings(embeddings):
 
   return normalized
 
+
 def compute_embedding_distances(embeddings):
   normalized = normalize_embeddings(embeddings)
 
@@ -592,8 +593,6 @@ def main():
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
   cluster_all_words(tsv_filenames, tsv_dir, None, None, 'senses.out')
-
-
 
 
 if __name__ == '__main__':
