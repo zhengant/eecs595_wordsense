@@ -107,7 +107,9 @@ def applyCategorizationModel(data, avgdis):
     return senses
 
 def applyCategorizationModelNew(data, avgdis, minSample):
-    clt = DBSCAN(eps = avgdis, min_samples = minSample).fit(data)
+    #clt = DBSCAN(eps = avgdis, min_samples = minSample).fit(data)
+    #clt = AffinityPropagation(damping = minSample).fit(data)
+    clt = MeanShift(bin_seeding=True).fit(data)
     senseList = [num + 1 for num in clt.labels_]
     return senseList
 
@@ -133,7 +135,7 @@ def buildResList(corpusDict, minSample):
     return resLists
 
 def output_senses(resLists, minSample):
-    with open('word2VecMinSample' + str(minSample) + '.txt', 'w') as out:
+    with open('word2VecMinShift' + str(minSample) + '.txt', 'w') as out:
         for i in range(len(resLists)):
             out.write(str(resLists[i][0]) + ' ' + str(resLists[i][1]) + ' ' + str(resLists[i][2]) + '/1.0\n')
 
@@ -143,8 +145,9 @@ directoryPath = sys.argv[1]
 #key, res, avgdis = getWord2VecEmbedding(key, processedList)
 #print(applyCategorizationModel(res, avgdis))
 
-for minSample in range(1, 21):
-
+#for minSample in range(1, 21):
+for minSample in range(1,2):
+    minSample *= 0.1
     corpusDict = readTsvDirectroy(directoryPath)
     print ("minSample " + str(minSample) + ":")
     resLists = buildResList(corpusDict, minSample)
