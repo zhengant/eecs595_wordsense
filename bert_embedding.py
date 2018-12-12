@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 #########################################################################
-# most of this code is adapted from extract_features.py from the Google 
+# much of this code is adapted from extract_features.py from the Google 
 # BERT github repository
 # https://github.com/google-research/bert
 #########################################################################
@@ -13,6 +13,7 @@ import codecs
 import collections
 import json
 import re
+import subprocess
 
 # assumes you have cloned the BERT repository to your working directory
 import bert.modeling
@@ -21,6 +22,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import pairwise_distances
+from sklearn.mixture import GaussianMixture
+
 
 def init_tf_flags():
   flags = tf.flags
@@ -337,44 +340,51 @@ def read_input_file(tsv_filename):
   return sentences, metadata
 
 
-def embed_sentences_in_file(tsv):
+class BertParams:
+  def __init__(self):
+    # setup
+    FLAGS = tf.flags.FLAGS
+
+    self.layer_indexes = [int(x) for x in FLAGS.layers.split(",")]
+
+    self.bert_config = bert.modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+
+    self.tokenizer = bert.tokenization.FullTokenizer(
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+
+    self.is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+    self.run_config = tf.contrib.tpu.RunConfig(
+        master=FLAGS.master,
+        tpu_config=tf.contrib.tpu.TPUConfig(
+            num_shards=FLAGS.num_tpu_cores,
+            per_host_input_for_training=self.is_per_host))
+
+    self.model_fn = model_fn_builder(
+        bert_config=self.bert_config,
+        init_checkpoint=FLAGS.init_checkpoint,
+        layer_indexes=self.layer_indexes,
+        use_tpu=FLAGS.use_tpu,
+        use_one_hot_embeddings=FLAGS.use_one_hot_embeddings)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.estimator = tf.contrib.tpu.TPUEstimator(
+        use_tpu=FLAGS.use_tpu,
+        model_fn=self.model_fn,
+        config=self.run_config,
+        predict_batch_size=FLAGS.batch_size)
+
+
+def embed_sentences_in_file(tsv, bert_params):
   sentences, metadata = read_input_file(tsv)
   embeddings = []
 
-  # setup
   FLAGS = tf.flags.FLAGS
-
-  layer_indexes = [int(x) for x in FLAGS.layers.split(",")]
-
-  bert_config = bert.modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
-
-  tokenizer = bert.tokenization.FullTokenizer(
-      vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
-
-  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-  run_config = tf.contrib.tpu.RunConfig(
-      master=FLAGS.master,
-      tpu_config=tf.contrib.tpu.TPUConfig(
-          num_shards=FLAGS.num_tpu_cores,
-          per_host_input_for_training=is_per_host))
-
-  model_fn = model_fn_builder(
-      bert_config=bert_config,
-      init_checkpoint=FLAGS.init_checkpoint,
-      layer_indexes=layer_indexes,
-      use_tpu=FLAGS.use_tpu,
-      use_one_hot_embeddings=FLAGS.use_one_hot_embeddings)
-
-  # If TPU is not available, this will fall back to normal Estimator on CPU
-  # or GPU.
-  estimator = tf.contrib.tpu.TPUEstimator(
-      use_tpu=FLAGS.use_tpu,
-      model_fn=model_fn,
-      config=run_config,
-      predict_batch_size=FLAGS.batch_size)
+  if bert_params is None:
+    bert_params = BertParams()
 
   features = convert_examples_to_features(
-    examples=sentences, seq_length=FLAGS.max_seq_length, tokenizer=tokenizer)
+    examples=sentences, seq_length=FLAGS.max_seq_length, tokenizer=bert_params.tokenizer)
   unique_id_to_feature = {}
   for feature in features:
     unique_id_to_feature[feature.unique_id] = feature
@@ -383,14 +393,14 @@ def embed_sentences_in_file(tsv):
     features=features, seq_length=FLAGS.max_seq_length) 
 
   # get embedding for each instance of the word
-  for idx, result in enumerate(estimator.predict(input_fn, yield_single_examples=True)):
+  for idx, result in enumerate(bert_params.estimator.predict(input_fn, yield_single_examples=True)):
     unique_id = int(result["unique_id"])
     feature = unique_id_to_feature[unique_id]
 
     for i, token in enumerate(feature.tokens):
       if token == metadata[idx][3]:
         layers = []
-        for j, _ in enumerate(layer_indexes):
+        for j, _ in enumerate(bert_params.layer_indexes):
           layer_output = result['layer_output_%d' % j]
           layers.append([
             round(float(x), 6) for x in layer_output[i:(i+1)].flat])
@@ -412,7 +422,7 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances, eps, min_samples):
-  db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed', n_jobs=-1)
+  db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed')
   labels = db.fit_predict(distances)
 
   # assign noisy points the label of their nearest non-noisy point
@@ -423,12 +433,33 @@ def cluster_embeddings_dbscan(distances, eps, min_samples):
   return labels
 
 
-def compute_embedding_distances(embeddings):
-  normalized_embeddings = np.array(embeddings)
-  for i in range(len(normalized_embeddings)):
-    normalized_embeddings[i] = np.divide(normalized_embeddings[i], np.linalg.norm(normalized_embeddings[i]))
+def normalize_embeddings(embeddings):
+  normalized = np.array(embeddings)
+  for i in range(len(normalized)):
+    normalized[i] = np.divide(normalized[i], np.linalg.norm(normalized[i]))
 
-  return pairwise_distances(normalized_embeddings, metric='euclidean', n_jobs=-1)
+  return normalized
+
+def compute_embedding_distances(embeddings):
+  normalized = normalize_embeddings(embeddings)
+
+  return pairwise_distances(normalized, metric='euclidean')
+
+
+def cluster_embeddings_gmm(embeddings, n_components_vals):
+  best_bic = np.Inf
+  best_predictions = None
+  normalized = normalize_embeddings(embeddings)
+  for n in n_components_vals:
+    gmm = GaussianMixture(n_components=n)
+    preds = gmm.fit(normalized).predict(normalized)
+    bic = gmm.bic(normalized)
+
+    if bic < best_bic:
+      best_predictions = preds
+      best_bic = bic
+
+  return best_preds
 
 
 def output_senses(labels, metadata, outfile):
@@ -444,30 +475,125 @@ def output_senses(labels, metadata, outfile):
       
 
 def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
-  # setup
-  tf.logging.set_verbosity(tf.logging.WARN)
-  init_tf_flags()
-
+  bert_params = BertParams()
   # read files
   for tsv in tsv_filenames:
-    embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv)
+    embeddings, metadata = embed_sentences_in_file(tsv_dir + '/' + tsv, bert_params)
     distances = compute_embedding_distances(embeddings)
-    print(distances)
-    print(np.mean(distances))
-    print(np.max(distances))
+    # print(distances)
+    # print(np.mean(distances))
+    # print(np.max(distances))
 
-    labels = cluster_embeddings_dbscan(distances, eps, min_samples)
-    print(labels)
+    # labels = cluster_embeddings_dbscan(distances, eps, min_samples)
+    labels = cluster_embeddings_gmm(embeddings, range(1,11))
 
     output_senses(labels, metadata, outfile)
 
 
+def find_performance_string(output_string):
+  lines = output_string.splitlines()
+  for line in reversed(lines):
+    if line[:3] == 'all':
+      tab_char = line.rfind('\t') # find last tab character
+      # get number: start from one past tab, go to all but last \n char
+      score = float(line[(tab_char):].strip())  
+      return score
+  print('could not find add')
+  return None
+
+
+def calc_harmonic_mean(b_cubed, nmi):
+  if b_cubed == 0 or nmi == 0:
+    return 0
+  else:
+    return 2/(1/b_cubed + 1/nmi)
+
+
+def hyperparameter_search(eps_vals, min_samples_vals):
+  test_data_dir = 'semeval-2012-task-13-trial-data'
+  tsv_dir = 'Datasets1'
+  tsv_filenames = os.listdir(tsv_dir)
+  # tsv_filenames = ['add.tsv']
+
+  best_b_cubed = 0
+  best_nmi = 0
+  best_harmonic_mean = 0
+  best_eps = eps_vals[0]
+  best_min_samples = min_samples_vals[0]
+
+  with open('hyperparameter_results.txt', 'w') as out:
+    for eps in eps_vals:
+      for min_samples in min_samples_vals:
+        print('eps: ' + str(eps) + '\t' + 'min_samples: ' + str(min_samples))
+
+        if os.path.isfile('senses.out'):
+          os.remove('senses.out')
+        cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, 'senses.out')
+
+        out.write('############################################################\n')
+        out.write(('epsilon = ' + str(eps) + '\n'))
+        out.write(('min_samples = ' + str(min_samples) + '\n'))
+        out.write('############################################################\n')        
+
+        result = subprocess.check_output(
+          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        b_cubed = find_performance_string(result.decode('utf-8'))
+        out.write('b-cubed: ' + str(b_cubed))
+        out.write('\n')
+
+        result = subprocess.check_output(
+          ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
+          test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+        nmi = find_performance_string(result.decode('utf-8'))
+        out.write('nmi: ' + str(nmi))
+        out.write('\n')
+        
+        hm = calc_harmonic_mean(b_cubed, nmi)
+        out.write('harmonic mean: ' + str(hm))
+        out.write('\n')
+
+        if(hm > best_harmonic_mean):
+          best_b_cubed = b_cubed
+          best_nmi = nmi
+          best_harmonic_mean = hm
+          best_eps = eps
+          best_min_samples = min_samples
+
+    out.write('best performance:\n')
+    out.write('eps: ' + str(best_eps) + '\n')
+    out.write('min_samples: ' + str(best_min_samples) + '\n')
+    out.write('b_cubed: ' + str(best_b_cubed) + '\n')
+    out.write('nmi: ' + str(best_nmi) + '\n')
+    out.write('harmonic mean: ' + str(best_harmonic_mean) + '\n')
+
+  print('best performance:')
+  print('eps: ' + str(best_eps))
+  print('min_samples: ' + str(best_min_samples))
+  print('b_cubed: ' + str(best_b_cubed))
+  print('nmi: ' + str(best_nmi))
+  print('harmonic mean: ' + str(best_harmonic_mean))
+
+  return best_eps, best_min_samples
+
+
 def main():
+  # setup
+  tf.logging.set_verbosity(tf.logging.WARN)
+  init_tf_flags()
+
+  # # hyperparameter search for bert->DBSCAN
+  # eps_vals = np.arange(0.25, 1.0, 0.05)
+  # min_vals = np.arange(1, 20, 1)
+  
+  # best_eps, best_min_samples = hyperparameter_search(eps_vals, min_vals)
+
+  # run test data
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
-  # tsv_filenames = ['Datasets/add.tsv']
+  cluster_all_words(tsv_filenames, tsv_dir, None, None, 'senses.out')
 
-  cluster_all_words(tsv_filenames, tsv_dir, 0.5, 2, 'senses.out')
+
 
 
 if __name__ == '__main__':
