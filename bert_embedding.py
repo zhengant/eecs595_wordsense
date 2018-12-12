@@ -422,6 +422,7 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances, eps, min_samples):
+  eps = np.mean(distances)
   db = DBSCAN(eps=eps, min_samples=min_samples, metric='precomputed')
   labels = db.fit_predict(distances)
 
@@ -484,9 +485,8 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, outfile):
     # print(distances)
     # print(np.mean(distances))
     # print(np.max(distances))
-
-    # labels = cluster_embeddings_dbscan(distances, eps, min_samples)
-    labels = cluster_embeddings_gmm(embeddings, range(1,11))
+    labels = cluster_embeddings_dbscan(distances, eps, min_samples)
+    # labels = cluster_embeddings_gmm(embeddings, range(1,11))
 
     output_senses(labels, metadata, outfile)
 
@@ -592,7 +592,7 @@ def main():
   # run test data
   tsv_dir = 'Datasets'
   tsv_filenames = os.listdir(tsv_dir)
-  cluster_all_words(tsv_filenames, tsv_dir, None, None, 'senses.out')
+  cluster_all_words(tsv_filenames, tsv_dir, None, 1, 'senses.out')
 
 
 if __name__ == '__main__':
