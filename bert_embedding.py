@@ -459,7 +459,7 @@ def cluster_embeddings_gmm(embeddings, n_components_vals):
       best_predictions = preds
       best_bic = bic
 
-  return preds
+  return best_preds
 
 
 def output_senses(labels, metadata, outfile):
