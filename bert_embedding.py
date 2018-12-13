@@ -311,6 +311,9 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 
 def read_input_file(tsv_filename):
+  """
+  Reads sentences and metadata from an input tsv
+  """
   sentences = []
   metadata = []
   unique_id = 0
@@ -341,6 +344,10 @@ def read_input_file(tsv_filename):
 
 
 class BertParams:
+  """
+  convenience class for passing around all the objects/variables/parameters
+  associated with BERT
+  """
   def __init__(self):
     # setup
     FLAGS = tf.flags.FLAGS
@@ -376,6 +383,11 @@ class BertParams:
 
 
 def embed_sentences_in_file(tsv, bert_params):
+  """
+  Extracts BERT embedding for the relevant word for each instance in a tsv.
+  Embedding is formed as the concatenation of the values in the last four layers
+  of the network. 
+  """
   sentences, metadata = read_input_file(tsv)
   embeddings = []
 
@@ -413,6 +425,9 @@ def embed_sentences_in_file(tsv, bert_params):
 
 
 def find_closest_inlier(i, labels, distances):
+  """
+  Finds the nearest non-noise neighbor to embedding i
+  """
   closest = np.argsort(distances[i])
   for idx in closest:
     if labels[idx] >= 0:
@@ -422,6 +437,13 @@ def find_closest_inlier(i, labels, distances):
 
 
 def cluster_embeddings_dbscan(distances, eps, min_samples, gamma):
+  """
+  Given a distance matrix of the embeddings, computes the clusterings
+  for those embeddings using DBSCAN. If eps is None, epsilon is computed 
+  as the mean of the distances scaled by a factor gamma. Otherwise epsilon
+  is fixed at eps. Embeddings that are identified as noise by DBSCAN are
+  assigned the same label as their nearest non-noise neighbor.
+  """
   if eps is None:
     eps = np.mean(distances) * gamma
 
@@ -437,6 +459,9 @@ def cluster_embeddings_dbscan(distances, eps, min_samples, gamma):
 
 
 def normalize_embeddings(embeddings):
+  """
+  Normalizes all the embeddings so that they reside on the unit hypersphere
+  """
   normalized = np.array(embeddings)
   for i in range(len(normalized)):
     normalized[i] = np.divide(normalized[i], np.linalg.norm(normalized[i]))
@@ -445,12 +470,19 @@ def normalize_embeddings(embeddings):
 
 
 def compute_embedding_distances(embeddings):
+  """
+  Produces a matrix containing the euclidean distances between all the embeddings
+  """
   normalized = normalize_embeddings(embeddings)
 
   return pairwise_distances(normalized, metric='euclidean')
 
 
 def cluster_embeddings_gmm(embeddings, n_components_vals):
+  """
+  Clusters the embeddings using GMM with BIC. Possible number of clusters
+  is chosen from n_components_vals.
+  """
   best_bic = np.Inf
   best_predictions = None
   normalized = normalize_embeddings(embeddings)
@@ -467,6 +499,10 @@ def cluster_embeddings_gmm(embeddings, n_components_vals):
 
 
 def output_senses(labels, metadata, outfile):
+  """
+  Appends the WSI results to outfile, following the structure required
+  for SemEval scoring.
+  """
   label_to_sense = {}
   with open(outfile, 'a') as out:
     for i, label in enumerate(labels):
@@ -479,6 +515,13 @@ def output_senses(labels, metadata, outfile):
       
 
 def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, gamma, outfile):
+  """
+  Takes a list of tsv filenames and the directory in which they reside and performs
+  the WSI process on them - embeds them using BERT and then clusters the results using
+  either GMM with BIC or DBSCAN. eps, min_samples, gamma are ignored if using GMM with BIC.
+  The results of the WSI process is written to a file with filename outfile - the file
+  can then be scored using the SemEval2013 scoring scripts.
+  """
   bert_params = BertParams()
   if os.path.isfile(outfile):
     os.remove(outfile)
@@ -496,6 +539,12 @@ def cluster_all_words(tsv_filenames, tsv_dir, eps, min_samples, gamma, outfile):
 
 
 def find_performance_string(output_string):
+  """
+  Parses the output passed to stdout by either of the two java evaluation jar files
+  that are used for cluster evaluation (the ones corresponding to fuzzy bcubed and
+  fuzzy nmi). Extracts the overall fscore for fuzzy bcubed and the overall score
+  for nmi.
+  """
   lines = output_string.splitlines()
   for line in reversed(lines):
     if line[:3] == 'all':
@@ -515,7 +564,15 @@ def calc_harmonic_mean(b_cubed, nmi):
 
 
 def hyperparameter_search_dbscan(eps_vals, min_samples_vals, gamma_vals):
-  test_data_dir = 'semeval-2012-task-13-trial-data'
+  """
+  Performs a hyperparameter search for dbscan either searching over epsilon and min_samples
+  or gamma and min_samples. If epsilon is None, gamma will be used. Otherwise, epsilon will
+  be used. Prints the results in a text file hyperparameter_results.txt (scroll to bottom
+  to get the best values). Assumes you have the trial data converted to tsvs and placed in
+  a directory called Datasets1 and the trial data unzipped to a directory called 
+  semeval-2012-task-13-trial-data. 
+  """
+  trial_data_dir = 'semeval-2012-task-13-trial-data'
   tsv_dir = 'Datasets1'
   tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['add.tsv']
@@ -544,15 +601,15 @@ def hyperparameter_search_dbscan(eps_vals, min_samples_vals, gamma_vals):
           out.write('############################################################\n')        
 
           result = subprocess.check_output(
-            ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
-            test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+            ['java', '-jar', trial_data_dir + '/evaluation/unsupervised/fuzzy-b-cubed.jar', 
+            trial_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
           b_cubed = find_performance_string(result.decode('utf-8'))
           out.write('b-cubed: ' + str(b_cubed))
           out.write('\n')
 
           result = subprocess.check_output(
-            ['java', '-jar', test_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
-            test_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
+            ['java', '-jar', trial_data_dir + '/evaluation/unsupervised/fuzzy-nmi.jar', 
+            trial_data_dir + '/evaluation/keys/gold-standard/trial.gold-standard.key', 'senses.out'])
           nmi = find_performance_string(result.decode('utf-8'))
           out.write('nmi: ' + str(nmi))
           out.write('\n')
