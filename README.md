@@ -4,15 +4,17 @@
 * tensorflow-gpu v1.12 or later
 * scikit-learn v0.20.1 or later
 * numpy v1.15 or later
+* gensim
+# scipy
+# nltk
 
 ## Usage for word2vecEmbeddingForm.py:
 This python file takes and only takes three extra argument:
-The first argument takes the trial data directory name.
-This argument can only be: 'TrialDatasets'
-The second argument takes the test data directory name.
-This argument can only be: 'TestDatasets'
-The third argument takes the clustering method name.
-This argument can only be one of the following three:
+The first argument takes the trial data directory name.  This argument can only be: 'TrialDatasets'
+
+The second argument takes the test data directory name.  This argument can only be: 'TestDatasets'
+
+The third argument takes the clustering method name.     This argument can only be one of the following three:
 DBSCAN or MeanShift or AffinityPropagation
 (corresponding to use DBSCAN clustering method, MeanShift clustering method and AffinityPropagation clustering method separately).
 
@@ -22,11 +24,16 @@ Usage example:
 cd to the folder which contains the file word2vecEmbeddingForm.py,
 Then, run:
 
-python3 word2vecEmbeddingForm.py TrialDatasets TestDatasets DBSCAN      
+python3 word2vecEmbeddingForm.py TrialDatasets TestDatasets DBSCAN
+
 Or
+
 python3 word2vecEmbeddingForm.py TrialDatasets TestDatasets MeanShift
+
 Or
+
 python3 word2vecEmbeddingForm.py TrialDatasets TestDatasets AffinityPropagation
+
 
 At present, the project can work only when typing the above three kinds of command.
 
