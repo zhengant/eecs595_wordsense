@@ -573,7 +573,7 @@ def hyperparameter_search_dbscan(eps_vals, min_samples_vals, gamma_vals):
   semeval-2012-task-13-trial-data. 
   """
   trial_data_dir = 'semeval-2012-task-13-trial-data'
-  tsv_dir = 'Datasets1'
+  tsv_dir = 'TrialDatasets'
   tsv_filenames = os.listdir(tsv_dir)
   # tsv_filenames = ['add.tsv']
 
@@ -658,7 +658,7 @@ def main():
   best_eps, best_min_samples, best_gamma = hyperparameter_search_dbscan([None], min_vals, gamma_vals)
 
   # run test data
-  tsv_dir = 'Datasets'
+  tsv_dir = 'TestDatasets'
   tsv_filenames = os.listdir(tsv_dir)
   cluster_all_words(tsv_filenames, tsv_dir, best_eps, best_min_samples, best_gamma, 'bert-dynamicdbscan-gamma.out')
 
