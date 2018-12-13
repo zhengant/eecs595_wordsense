@@ -43,11 +43,11 @@ except OSError:
 else:
     print("Successfully created the directory %s " % path)
 
-root_dir = 'xml-format'
+root_dir = 'rawTestData'
 for subdir, dirs, files in os.walk(root_dir):
     for file in files:
         file_name = os.path.join(subdir, file)
-        if not str(file_name) == "xml-format/.DS_Store":
+        if not str(file_name) == "rawTestData/.DS_Store":
             lemma = ""
             corpus = ("id" + "\t" + "lemma" + "\t" + "partOfSpeech" + "\t" + "token" + "\t" + "context" + "\n")
             doc = minidom.parse(file_name)
@@ -57,7 +57,7 @@ for subdir, dirs, files in os.walk(root_dir):
                 sub_items = item.getElementsByTagName('instance')
                 for sub in sub_items:
                     corpus += (sub.attributes['id'].value + "\t" + sub.attributes['lemma'].value + "\t" + sub.attributes['partOfSpeech'].value + "\t" + sub.attributes['token'].value + "\t" + sub.firstChild.data + "\n")
-            outfile = ("Datasets/" + str(lemma) + ".tsv")
+            outfile = ("TestDatasets/" + str(lemma) + ".tsv")
             f = open(outfile, "w")
             f.write(corpus)
             f.close()

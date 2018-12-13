@@ -22,7 +22,7 @@ for item in items:
             'partOfSpeech'].value + "\t" + item.attributes['token'].value + "\t" + item.firstChild.data + "\n")
     else:
         if lemma == "add":
-            outfile = ("Datasets1/" + str(lemma) + ".tsv")
+            outfile = ("TrialDatasets/" + str(lemma) + ".tsv")
             corpus = ("id" + "\t" + "lemma" + "\t" + "partOfSpeech" + "\t" + "token" + "\t" + "context" + "\n")
             corpus += (item.attributes['id'].value + "\t" + item.attributes['lemma'].value + "\t" + item.attributes[
                 'partOfSpeech'].value + "\t"
